@@ -64,17 +64,6 @@ Changelog
    20080408 * First release.
 """
 from __future__ import print_function
-import sys
-if sys.version_info >= (3, 0):
-    from http import server as httpserver
-    import socketserver
-    from urllib import parse as urllibparse
-    unicode = str
-else:
-    import BaseHTTPServer as httpserver
-    import SocketServer as socketserver
-    import urllib as urllibparse
-
 import cgi
 import os
 import posixpath
@@ -88,6 +77,20 @@ import socket
 import base64
 import functools
 
+# non-droopy custom code
+from process_data import process_data
+
+import sys
+if sys.version_info >= (3, 0):
+    from http import server as httpserver
+    import socketserver
+    from urllib import parse as urllibparse
+    unicode = str
+else:
+    import BaseHTTPServer as httpserver
+    import SocketServer as socketserver
+    import urllib as urllibparse
+
 
 def _decode_str_if_py2(inputstr, encoding='utf-8'):
     "Will return decoded with given encoding *if* input is a string and it's Py2."
@@ -96,6 +99,7 @@ def _decode_str_if_py2(inputstr, encoding='utf-8'):
     else:
         return inputstr
 
+
 def _encode_str_if_py2(inputstr, encoding='utf-8'):
     "Will return encoded with given encoding *if* input is a string and it's Py2"
     if sys.version_info < (3,) and isinstance(inputstr, str):
@@ -103,15 +107,18 @@ def _encode_str_if_py2(inputstr, encoding='utf-8'):
     else:
         return inputstr
 
+
 def fullpath(path):
     "Shortcut for os.path abspath(expanduser())"
     return os.path.abspath(os.path.expanduser(path))
+
 
 def basename(path):
     "Extract the file base name (some browsers send the full file path)."
     for mod in posixpath, macpath, ntpath:
         path = mod.basename(path)
     return path
+
 
 def check_auth(method):
     "Wraps methods on the request handler to require simple auth checks."
@@ -297,7 +304,7 @@ class HTTPUploadHandler(httpserver.BaseHTTPRequestHandler):
 
         # TODO: Refactor special-method handling to make more modular?
         # Include ability to self-define "special method" prefix path?
-        if self.picture != None and self.path == '/__droopy/picture':
+        if self.picture is not None and self.path == '/__droopy/picture':
             # send the picture
             self.send_file(self.picture)
         # TODO Verify that this is path-injection proof
@@ -318,7 +325,7 @@ class HTTPUploadHandler(httpserver.BaseHTTPRequestHandler):
                                       headers=self.headers,
                                       environ={'REQUEST_METHOD': self.command})
             file_items = form[self.form_field]
-            #-- Handle multiple file upload
+            # -- Handle multiple file upload
             if not isinstance(file_items, list):
                 file_items = [file_items]
             for item in file_items:
@@ -344,6 +351,11 @@ class HTTPUploadHandler(httpserver.BaseHTTPRequestHandler):
                 if self.file_mode is not None:
                     os.chmod(localpath, self.file_mode)
                 self.log_message("Received: %s", os.path.basename(localpath))
+
+            self.log_message("Received: %s", os.path.basename(localpath))
+
+            # Process (CUSTOM CODE HERE)
+            process_data().import_tsv(os.path.abspath(localpath))
 
             # -- Reply
             if self.publish_files:
@@ -466,7 +478,8 @@ def run(hostname='',
 
 # -- HTML templates
 
-style = '''
+
+style = """
 <meta name="viewport"
       content="width=device-width,initial-scale=1,maximum-scale=1" />
 <style type="text/css">
@@ -504,7 +517,7 @@ a {color: #4499cc; text-decoration: none;}
 #files a:link {color: #4499cc}
 #files a:visited {color: #a0c0e0}
 #files a:hover {background-color:#f0f0f0}
---></style>'''
+--></style>"""
 
 userinfo = '''
 <div id="userinfo">
@@ -1109,6 +1122,7 @@ def main():
             localisations=default_localisations)
     except KeyboardInterrupt:
         print('^C received, awaiting termination of remaining server threads..')
+
 
 if __name__ == '__main__':
     main()
